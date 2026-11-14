@@ -50,7 +50,8 @@ def forecast_origins(daily):
     return frame.dropna()
 
 
-def evaluate(daily, split, output):
+def partition_origins(daily, split):
+    """Build the original train/replay split, closing validation before test data."""
     if split == "validation":
         daily = daily.loc[daily.index < TEST_START]
     frame = forecast_origins(daily)
@@ -62,22 +63,40 @@ def evaluate(daily, split, output):
         replay = frame.loc[frame.index >= TEST_START].copy()
     if train.empty or replay.empty:
         raise ValueError("Daily series does not cover the required training and replay periods")
+    return train, replay
+
+
+def fit_reserves(train, replay, features=FEATURES):
+    """Fit train-only scaling and regression; retain the fixed 50:50 blend."""
     method = make_pipeline(StandardScaler(), QuantileRegressor(quantile=Q, alpha=0, solver="highs"))
-    method.fit(train[FEATURES], train.actual_gbp)
-    replay["linear_q80"] = np.maximum(0, method.predict(replay[FEATURES]))
+    method.fit(train[features], train.actual_gbp)
+    predictions = pd.DataFrame(index=replay.index)
+    predictions["linear_q80"] = np.maximum(0, method.predict(replay[features]))
+    predictions["training_q80"] = train.actual_gbp.quantile(Q)
+    predictions["model_q80"] = 0.5 * predictions.linear_q80 + 0.5 * predictions.training_q80
+    return method, predictions
+
+
+def reserve_metrics(actual, reserve):
+    """Average costs over all decision origins, including zero shortfall/unused."""
+    return {
+        "pinball_gbp": round(float(mean_pinball_loss(actual, reserve, alpha=Q)), 2),
+        "coverage": round(float((actual <= reserve).mean()), 4),
+        "shortfall_days": int((actual > reserve).sum()),
+        "mean_shortfall_gbp": round(float((actual - reserve).clip(lower=0).mean()), 2),
+        "mean_unused_gbp": round(float((reserve - actual).clip(lower=0).mean()), 2),
+    }
+
+
+def evaluate(daily, split, output):
+    train, replay = partition_origins(daily, split)
+    method, predictions = fit_reserves(train, replay)
+    replay["linear_q80"] = predictions.linear_q80
     replay["last_week"] = replay.cancel_7d
-    replay["training_q80"] = train.actual_gbp.quantile(Q)
-    replay["model_q80"] = 0.5 * replay.linear_q80 + 0.5 * replay.training_q80
-    metrics = {}
-    for name in ["last_week", "training_q80", "historical_q80", "linear_q80", "model_q80"]:
-        actual, reserve = replay.actual_gbp, replay[name]
-        metrics[name] = {
-            "pinball_gbp": round(float(mean_pinball_loss(actual, reserve, alpha=Q)), 2),
-            "coverage": round(float((actual <= reserve).mean()), 4),
-            "shortfall_days": int((actual > reserve).sum()),
-            "mean_shortfall_gbp": round(float((actual - reserve).clip(lower=0).mean()), 2),
-            "mean_unused_gbp": round(float((reserve - actual).clip(lower=0).mean()), 2),
-        }
+    replay["training_q80"] = predictions.training_q80
+    replay["model_q80"] = predictions.model_q80
+    metrics = {name: reserve_metrics(replay.actual_gbp, replay[name]) for name in
+               ["last_week", "training_q80", "historical_q80", "linear_q80", "model_q80"]}
     # Convert the standardized fit back to GBP-scale slopes for exact local explanations.
     scaler, regression = method.steps[0][1], method.steps[1][1]
     slopes = regression.coef_ / scaler.scale_

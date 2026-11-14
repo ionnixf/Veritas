@@ -1,0 +1,158 @@
+{
+  "split": "validation",
+  "reproduce_commands": [
+    "python3 -m venv .venv",
+    ".venv/bin/python -m pip install -r requirements.txt",
+    ".venv/bin/python -m experiments.evaluate",
+    ".venv/bin/python -m experiments.sales_ablation",
+    ".venv/bin/python -m unittest experiments.test_sales_ablation -v"
+  ],
+  "daily_path": "data/processed/daily.csv",
+  "daily_sha256": "78e3b7691b41995ec380221cac416a71f5e12e7102ed6435128b27833ebba30c",
+  "runtime": {
+    "python": "3.15.0",
+    "numpy": "2.5.4",
+    "pandas": "3.1.1",
+    "scikit-learn": "1.9.1",
+    "scipy": "1.18.1",
+    "python-calamine": "0.9.1"
+  },
+  "quantile": 0.8,
+  "weight_on_linear": 0.5,
+  "train_origins": 333,
+  "train_first_origin": "2010-01-27",
+  "train_last_origin": "2010-12-25",
+  "train_last_target_day": "2010-12-31",
+  "first_origin": "2011-01-01",
+  "last_origin": "2011-06-24",
+  "validation_last_target_day": "2011-06-30",
+  "origins": 175,
+  "control_reproduction_passed": true,
+  "metrics": {
+    "training_q80": {
+      "pinball_gbp": 5381.14,
+      "coverage": 0.84,
+      "shortfall_days": 28,
+      "mean_shortfall_gbp": 4412.19,
+      "mean_unused_gbp": 9256.94
+    },
+    "full_blend": {
+      "pinball_gbp": 5357.68,
+      "coverage": 0.8057,
+      "shortfall_days": 34,
+      "mean_shortfall_gbp": 4553.5,
+      "mean_unused_gbp": 8574.42
+    },
+    "without_sales_blend": {
+      "pinball_gbp": 5454.88,
+      "coverage": 0.84,
+      "shortfall_days": 28,
+      "mean_shortfall_gbp": 4283.4,
+      "mean_unused_gbp": 10140.78
+    }
+  },
+  "fits": {
+    "full": {
+      "features": [
+        "cancel_7d",
+        "cancel_28d_weekly",
+        "sales_7d",
+        "sales_28d_weekly"
+      ],
+      "scaler_mean_train": [
+        12689.966426426432,
+        12224.482957957958,
+        197002.93855855856,
+        194339.42370120122
+      ],
+      "scaler_scale_train": [
+        12394.65575216658,
+        5650.764911582382,
+        71574.09170773967,
+        61215.24002047216
+      ],
+      "linear_intercept_gbp": 12149.366234425075,
+      "linear_slopes": {
+        "cancel_7d": -0.17724700244893812,
+        "cancel_28d_weekly": -0.8369287837241759,
+        "sales_7d": 0.1584958982043224,
+        "sales_28d_weekly": -0.04353909181691233
+      }
+    },
+    "without_sales": {
+      "features": [
+        "cancel_7d",
+        "cancel_28d_weekly"
+      ],
+      "scaler_mean_train": [
+        12689.966426426432,
+        12224.482957957958
+      ],
+      "scaler_scale_train": [
+        12394.65575216658,
+        5650.764911582382
+      ],
+      "linear_intercept_gbp": 24648.850227164497,
+      "linear_slopes": {
+        "cancel_7d": 0.17529223551410616,
+        "cancel_28d_weekly": -0.5032677039768331
+      }
+    }
+  },
+  "bootstrap": {
+    "method": "existing paired moving-block bootstrap",
+    "block_days": 14,
+    "draws": 2000,
+    "seed": 2026,
+    "difference": "loss(full blend) - loss(blend without sales)",
+    "negative_favors": "full blend (sales features)"
+  },
+  "full_minus_without_sales": {
+    "delta_gbp": -97.2,
+    "interval_95_gbp": [
+      -697.76,
+      140.05
+    ]
+  },
+  "temporal_boundary_check": {
+    "passed": true,
+    "as_of": "2011-04-04",
+    "perturbation": "Add GBP 1,000 cancellation and GBP 2,000 sale (two invoice lines) per day from D through 2011-06-30, in memory at daily-aggregate level.",
+    "train_and_origins_unchanged": true,
+    "all_features_through_D_exactly_unchanged": true,
+    "features_at_D_before": {
+      "cancel_7d": 9218.77,
+      "cancel_28d_weekly": 8358.255,
+      "sales_7d": 192720.48,
+      "sales_28d_weekly": 159822.025,
+      "historical_q80": 13072.018000000004
+    },
+    "features_at_D_after": {
+      "cancel_7d": 9218.77,
+      "cancel_28d_weekly": 8358.255,
+      "sales_7d": 192720.48,
+      "sales_28d_weekly": 159822.025,
+      "historical_q80": 13072.018000000004
+    },
+    "reserves_at_D": {
+      "full_blend": {
+        "before_gbp": 22799.093226790337,
+        "after_gbp": 22799.093226790337
+      },
+      "without_sales_blend": {
+        "before_gbp": 20274.786613026,
+        "after_gbp": 20274.786613026
+      },
+      "training_q80": {
+        "before_gbp": 18491.184000000016,
+        "after_gbp": 18491.184000000016
+      }
+    },
+    "actual_week_before_gbp": 12885.660000000003,
+    "actual_week_after_gbp": 19885.660000000003,
+    "actual_week_delta_gbp": 7000.0,
+    "next_day_features_respond": true,
+    "scope": "Feature and model boundary on daily aggregates; raw workbook parsing not tested."
+  },
+  "final_test_evaluated": false
+}
