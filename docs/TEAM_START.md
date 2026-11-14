@@ -6,22 +6,24 @@
 
 Демо и эксперимент по признакам продаж объединены. Отправьте задания параллельно.
 
-| Участник | Модель | Готовый промпт |
-|---|---|---|
-| 1 · экран для записи | GPT-6.1 Sol · Medium | [Проверить демо](../prompts/next/01-codex-demo.md) |
-| 2 · финальная оценка | GPT-6.1 Sol · High | [Зафиксировать метод и провести отложенный тест](../prompts/next/02-codex-ml.md) |
-| 3 · видео | DeepSeek Flash | [Подготовить полный сценарий](../prompts/next/03-deepseek-video.md) |
+| Участник | Модель / ID | Рассуждение | Готовый промпт |
+|---|---|---|---|
+| 1 · экран для записи | **GPT-6.1-Sol**, `gpt-6.1-sol` | **Medium**, `medium` | [Проверить демо](../prompts/next/01-codex-demo.md) |
+| 2 · финальная оценка | **GPT-6.1-Sol**, `gpt-6.1-sol` | **High**, `high` | [Зафиксировать метод и провести отложенный тест](../prompts/next/02-codex-ml.md) |
+| 3 · видео | **DeepSeek Flash**, API `deepseek-flash` | **Thinking выключен**, `thinking.type = "disabled"` | [Подготовить полный сценарий](../prompts/next/03-deepseek-video.md) |
+
+Выберите модель и уровень рассуждения в клиенте перед отправкой. Имена и поддержка `medium`/`high` сверены с локальным каталогом Codex и официальной документацией 14 ноября 2026 года. Рекомендуемые настройки для каждой задачи указаны в таблице. Доступ на втором аккаунте проверяется в его списке моделей. DeepSeek указан для официального API. [OpenAI](https://developers.openai.com/api/docs/models/gpt-6.1-sol) · [DeepSeek](https://api-docs.deepseek.com/quick_start/pricing/) · [Thinking](https://api-docs.deepseek.com/guides/thinking_mode/)
 
 В чат Codex 1 отправьте одну строку.
 
 ```text
-Выполни git fetch origin. Прочитай prompts/next/01-codex-demo.md из origin/codex/team-start через git show и полностью выполни задание.
+Выполни git fetch origin и git show origin/codex/team-start:prompts/next/01-codex-demo.md. Прочитай полученное задание и полностью выполни его.
 ```
 
 В чат Codex 2 отправьте одну строку.
 
 ```text
-Выполни git fetch origin. Прочитай prompts/next/02-codex-ml.md из origin/codex/team-start через git show и полностью выполни задание.
+Выполни git fetch origin и git show origin/codex/team-start:prompts/next/02-codex-ml.md. Прочитай полученное задание и полностью выполни его.
 ```
 
 Для DeepSeek прикрепите файл 03-deepseek-video.md и отправьте «Полностью выполни задание из прикреплённого Markdown-файла».
