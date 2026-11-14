@@ -1,17 +1,13 @@
 """Audit the existing frozen test artifacts without fitting or selecting a model."""
 
 import hashlib
-from importlib.metadata import version
 import json
 from pathlib import Path
-import platform
 
 import numpy as np
 import pandas as pd
 
 
-PROTOCOL_SHA = "06407270d4d7c972832c86ed0b74c7ab07f54aad"
-IMPLEMENTATION_SHA = "76fc2f76af2494aadb7bca6bcfd57a7d849108e9"
 FROZEN_HASHES = {
     "data/processed/daily.csv": "78e3b7691b41995ec380221cac416a71f5e12e7102ed6435128b27833ebba30c",
     "experiments/evaluate.py": "e5e44ba7d5c09d4e98632068973b320329367cc9a5b66ed3fd9df5db80e24242",
@@ -110,33 +106,8 @@ def audit():
         close(delta.mean(), comparison["delta_gbp"], atol=0.0051)
         close(np.quantile(draws, [0.025, 0.975]), comparison["interval_95_gbp"], atol=0.0051)
 
-    audit_report = {
-        "protocol_commit": PROTOCOL_SHA,
-        "implementation_commit": IMPLEMENTATION_SHA,
-        "command": ".venv-ml-final/bin/python -m experiments.evaluate --split test",
-        "final_evaluator_invocations_by_this_owner": 1,
-        "audit_command": ".venv-ml-final/bin/python -m experiments.audit_final",
-        "audit_refits_model": False,
-        "python": platform.python_version(),
-        "packages": {name: version(name) for name in (
-            "numpy", "pandas", "python-calamine", "scikit-learn", "scipy", "joblib",
-            "threadpoolctl", "narwhals", "cloudpickle", "python-dateutil", "tzdata")},
-        "sha256": {path: sha256(path) for path in (
-            *FROZEN_HASHES, "experiments/final_protocol.md", "experiments/audit_final.py",
-            "artifacts/test_metrics.json", "artifacts/test_replay.csv")},
-        "origins": len(replay),
-        "first_origin": str(replay.index[0].date()),
-        "last_origin": str(replay.index[-1].date()),
-        "last_target_day": str((replay.index[-1] + pd.Timedelta(days=6)).date()),
-        "currency": "GBP",
-        "delta_definition": "mean pinball(full blend) minus mean pinball(constant train-Q80)",
-        "checks_passed": ["frozen hashes", "CSV schema", "consecutive complete target dates",
-                          "train boundary and count", "history through D-1", "D through D+6 targets",
-                          "constant and last-week baselines", "linear formula and 50:50 blend",
-                          "unchanged validation fit", "all method metrics", "all paired bootstrap intervals"],
-    }
-    Path("artifacts/final_run.json").write_text(json.dumps(audit_report, indent=2) + "\n")
-    print(json.dumps(audit_report, indent=2))
+    print(f"PASS: frozen inputs, {len(replay)} test dates, predictions, metrics and paired intervals. "
+          "No files written; no model fitted.")
 
 
 if __name__ == "__main__":

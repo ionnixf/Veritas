@@ -193,9 +193,11 @@ def run(daily_path, output):
         "without_sales_blend": reserve_metrics(replay.actual_gbp, reduced.model_q80),
     }
     # Fail rather than silently report results from changed dates/data or fit conditions.
-    assert len(train) == 333 and len(replay) == 175
-    assert metrics["training_q80"]["pinball_gbp"] == 5381.14
-    assert metrics["full_blend"]["pinball_gbp"] == 5357.68
+    if len(train) != 333 or len(replay) != 175:
+        raise ValueError("Validation origins differ from the fixed experiment")
+    if (metrics["training_q80"]["pinball_gbp"] != 5381.14
+            or metrics["full_blend"]["pinball_gbp"] != 5357.68):
+        raise ValueError("Validation control scores differ from the fixed experiment")
     report = {
         "split": "validation",
         "reproduce_commands": REPRODUCE.splitlines(),

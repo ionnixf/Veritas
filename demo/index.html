@@ -46,7 +46,8 @@ footer{margin-top:8px}.source{margin-top:4px}
 const rows = __REPLAY_DATA__;
 const byDate = new Map(rows.map(row => [row.as_of, row]));
 const $ = id => document.getElementById(id);
-const money = value => new Intl.NumberFormat('en-GB', {style:'currency',currency:'GBP'}).format(value);
+const currency = new Intl.NumberFormat('en-GB', {style:'currency',currency:'GBP'});
+const money = value => currency.format(value);
 // CSV values have four decimals. Integer ten-thousandths preserve subtraction before display rounding.
 const units = value => Math.round(Number(value) * 10000);
 const prettyDate = value => new Date(value+'T00:00:00Z').toLocaleDateString('en-GB',{day:'numeric',month:'long',year:'numeric',timeZone:'UTC'});

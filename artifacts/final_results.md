@@ -74,16 +74,19 @@ financial advice.
   verified coefficients against the original validation fit, and confirmed
   unchanged evaluator/data hashes. It performs no fitting or model selection.
 
-Run from the repository root with CPython 3.15.0. The final artifacts are already
-committed; the audit alone verifies them without rerunning the evaluator:
+The final artifacts are already committed. From the repository root, the audit
+verifies existing files and prints PASS without rerunning the evaluator or
+writing files. It preserves the historical `final_run.json` from the original
+CPython 3.15.0 run:
 
 ```bash
-python3.15 -m venv .venv-ml-final
-.venv-ml-final/bin/python -m pip install -r requirements.txt
-.venv-ml-final/bin/python -m experiments.audit_final
+python3 -m venv .venv
+.venv/bin/python -m pip install -r requirements.txt
+.venv/bin/python -m experiments.audit_final
 ```
 
-For an independent reproduction of the frozen evaluation, use
-`.venv-ml-final/bin/python -m experiments.evaluate --split test` before the audit.
-This reproduces the existing test result and must not initiate model selection.
-Exact installed package versions are retained in `final_run.json`.
+Independent reproduction uses the unchanged evaluator and settings in the
+[frozen protocol](../experiments/final_protocol.md). Routine verification only
+needs the read-only audit above. Original runtime versions and file hashes are
+retained in the historical `final_run.json`; the audit does not replace them
+with the current environment.

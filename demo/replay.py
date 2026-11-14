@@ -14,6 +14,8 @@ def main():
     args = parser.parse_args()
     with args.file.open(newline="") as stream:
         rows = {row["as_of"]: row for row in csv.DictReader(stream)}
+    if not rows:
+        parser.error(f"{args.file} contains no dates")
     if args.as_of not in rows:
         parser.error(f"Date outside replay. Choose a day from {min(rows)} to {max(rows)}.")
     row = rows[args.as_of]
