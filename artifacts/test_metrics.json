@@ -1,0 +1,77 @@
+{
+  "split": "test",
+  "quantile": 0.8,
+  "train_origins": 333,
+  "linear_intercept_gbp": 12149.366234425075,
+  "linear_slopes": {
+    "cancel_7d": -0.17724700244893812,
+    "cancel_28d_weekly": -0.8369287837241759,
+    "sales_7d": 0.1584958982043224,
+    "sales_28d_weekly": -0.04353909181691233
+  },
+  "weight_on_linear": 0.5,
+  "comparison_vs_training_q80": {
+    "block_7d": {
+      "delta_gbp": -28.3,
+      "interval_95_gbp": [
+        -467.37,
+        632.49
+      ]
+    },
+    "block_14d": {
+      "delta_gbp": -28.3,
+      "interval_95_gbp": [
+        -484.27,
+        707.08
+      ]
+    },
+    "block_28d": {
+      "delta_gbp": -28.3,
+      "interval_95_gbp": [
+        -565.26,
+        476.74
+      ]
+    }
+  },
+  "train_last_target_day": "2010-12-31",
+  "first_origin": "2011-07-01",
+  "last_origin": "2011-12-02",
+  "origins": 155,
+  "metrics": {
+    "last_week": {
+      "pinball_gbp": 4950.14,
+      "coverage": 0.5355,
+      "shortfall_days": 72,
+      "mean_shortfall_gbp": 5105.87,
+      "mean_unused_gbp": 4327.24
+    },
+    "training_q80": {
+      "pinball_gbp": 2483.98,
+      "coverage": 0.7613,
+      "shortfall_days": 37,
+      "mean_shortfall_gbp": 1340.02,
+      "mean_unused_gbp": 7059.82
+    },
+    "historical_q80": {
+      "pinball_gbp": 2741.83,
+      "coverage": 0.7032,
+      "shortfall_days": 46,
+      "mean_shortfall_gbp": 1726.93,
+      "mean_unused_gbp": 6801.44
+    },
+    "linear_q80": {
+      "pinball_gbp": 2967.01,
+      "coverage": 0.9355,
+      "shortfall_days": 10,
+      "mean_shortfall_gbp": 124.17,
+      "mean_unused_gbp": 14338.35
+    },
+    "model_q80": {
+      "pinball_gbp": 2455.68,
+      "coverage": 0.8774,
+      "shortfall_days": 19,
+      "mean_shortfall_gbp": 462.28,
+      "mean_unused_gbp": 10429.27
+    }
+  }
+}
