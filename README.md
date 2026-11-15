@@ -6,6 +6,21 @@ model on CPU, inspect spending history and export a review queue.
 
 ## Run
 
+With Docker and Docker Compose installed, run from the project root:
+
+```bash
+docker compose up
+```
+
+The first run builds the image and installs dependencies. Open
+**http://127.0.0.1:8088** and select **Run live demo**. Readiness is available at
+`http://127.0.0.1:8088/api/v1/health`. Stop and remove the container with
+`docker compose down`. To use another local port:
+`AUDITLENS_PORT=8089 docker compose up`. After changing the source, rebuild with
+`docker compose up --build`.
+
+### Local development
+
 Requires **uv, Python 3.12, Node.js 22.12+ and npm**. The first setup downloads
 dependencies. The selected model and fictional demo inputs are included.
 
