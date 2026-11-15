@@ -1,5 +1,9 @@
 # Handbook dataset
 
+Fresh clones contain only this README in `data/`. Setup and application startup
+do not download training datasets. The following layout describes optional
+local research artifacts, which are excluded from Git:
+
 - `raw/handbook/`: the 183 original daily files and acquisition manifest.
 - `processed/handbook/raw.parquet`: combined original transactions.
 - `processed/handbook/features-v1.parquet`: prepared past-only features.
@@ -15,7 +19,9 @@ Authors: Yann-Aël Le Borgne, Wissam Siblini, Bertrand Lebichot and Gianluca Bon
 *Reproducible Machine Learning for Credit Card Fraud Detection — Practical Handbook* (2022).
 All records are synthetic. April is history warmup; May–July training, August
 validation, September testing. Application inference does not read these datasets;
-it uses the selected frozen model and supplied input files.
+it uses the selected frozen model and supplied input files. The self-authored
+fictional demo CSVs needed by the application are included separately in
+`src/auditlens/backend/assets/`.
 
 The stored book license does not establish a separate raw-data redistribution
-grant. Publisher data and derived files remain local and ignored by Git.
+grant. Any locally retained publisher data and derived files are ignored by Git.

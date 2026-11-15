@@ -21,6 +21,9 @@ The first run builds the image and installs dependencies. Open
 
 ### Local development
 
+The local scripts use **Bash on Linux or WSL**. On macOS, use Docker for the
+bundled CPU dependencies.
+
 Requires **uv, Python 3.12, Node.js 22.12+ and npm**. The first setup downloads
 dependencies. The selected model and fictional demo inputs are included.
 
@@ -45,7 +48,7 @@ src/auditlens/inference.py      Frozen model loader
 src/auditlens/io.py             CSV/XLSX readers
 models/handbook-xgboost-v1/     Selected weights, schemas and benchmark metadata
 models/registry.json           Single supported model route
-data/                         Handbook dataset, prepared features and examples
+data/                         Provenance notes and optional local research data
 scripts/                       Dependency setup and local server startup
 tests/                         Backend and static-serving tests
 requirements.txt               Locked CPU Python dependencies and test tools
@@ -108,8 +111,10 @@ independent holdout. Terminal-compromise recall is only 0.0006. No real-bank
 effectiveness or merchant pilot is established. Scores are uncalibrated review
 priorities; explanations show observed history, not causal attribution.
 
-The Handbook dataset is retained locally under `data/` with raw files, prepared
-features and upload examples; it is ignored by Git. See `data/README.md`.
+Training datasets are not included in a fresh clone or downloaded during setup.
+Optional research files under `data/` are ignored by Git; see `data/README.md`
+for provenance and the local directory layout. The fictional demo CSVs are
+included in `src/auditlens/backend/assets/`.
 The selected weights are included at the owner's
 request; upstream redistribution permission remains unconfirmed. No AuditLens
 source-code license has been selected. Load only the trusted bundled model.

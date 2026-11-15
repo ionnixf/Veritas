@@ -358,6 +358,7 @@ export default function App() {
   const [filter, setFilter] = useState<QueueFilter>("all");
   const [queuePage, setQueuePage] = useState(1);
   const [notice, setNotice] = useState("");
+  const main = useRef<HTMLElement>(null);
   const heading = useRef<HTMLHeadingElement>(null);
   const navigating = useRef(false);
   const navigate = (next: Page) => {
@@ -442,6 +443,7 @@ export default function App() {
       setFilter("all");
       setQueuePage(1);
       setConnection("ready");
+      setConnectionError("");
       navigate("queue");
     } catch (e) {
       setError(
@@ -460,6 +462,8 @@ export default function App() {
     }
   };
   const template = async (name: string) => {
+    setError("");
+    setNotice("");
     try {
       const blob = await request<Blob>(`/templates/${name}.csv`);
       downloadBlob(blob, `${name}.csv`);
@@ -502,7 +506,14 @@ export default function App() {
 
   return (
     <div className="app-shell">
-      <a className="skip-link" href="#main">
+      <a
+        className="skip-link"
+        href="#main"
+        onClick={(e) => {
+          e.preventDefault();
+          main.current?.focus();
+        }}
+      >
         Skip to content
       </a>
       <aside className="sidebar">
@@ -565,7 +576,7 @@ export default function App() {
                 : "Server unavailable"}
           </span>
         </header>
-        <main id="main" tabIndex={-1}>
+        <main ref={main} id="main" tabIndex={-1}>
           {connectionError && (
             <div className="connection-banner">
               <Alert error>

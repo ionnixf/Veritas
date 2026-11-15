@@ -125,14 +125,12 @@ class HandbookService:
         coverage = [
             "History completeness cannot be verified; supply all relevant transactions in the preceding windows."
         ]
-        cutoff = current["timestamp"].min().replace(hour=0, minute=0, second=0, microsecond=0) - timedelta(
-            days=30
-        )
+        first_day = current["timestamp"].min().replace(hour=0, minute=0, second=0, microsecond=0)
         if history is None:
             coverage.append(
                 "No history supplied: initial rows may have customer/terminal cold starts and incomplete windows."
             )
-        elif history["timestamp"].min() > cutoff:
+        elif first_day - history["timestamp"].min() < timedelta(days=30):
             coverage.append(
                 "Insufficient history coverage: fewer than 30 preceding complete calendar days; customer/pair windows may be incomplete."
             )
@@ -150,7 +148,7 @@ class HandbookService:
         operations = []
         for row in rows[:top_k]:
             source = dict(originals[row["record_id"]])
-            source["timestamp"] = source["timestamp"].strftime("%Y-%m-%dT%H:%M:%S")
+            source["timestamp"] = source["timestamp"].isoformat(timespec="seconds")
             operations.append(
                 {
                     **source,

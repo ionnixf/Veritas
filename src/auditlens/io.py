@@ -18,25 +18,39 @@ def read_table(path, max_rows=1_000_000):
             path,
             infer_schema_length=None,
             n_rows=max_rows + 1,
-            null_values=["", "NA"],
+            null_values=[""],
             schema_overrides=strings,
         )
     elif path.suffix.lower() == ".xlsx":
         from openpyxl import load_workbook
 
-        book = load_workbook(path, read_only=True, data_only=True)
+        book = load_workbook(path, read_only=True, data_only=False, keep_links=False)
         try:
             sheet = book.active
-            iterator = sheet.iter_rows(values_only=True)
-            headers = list(next(iterator, ()))
+            if sheet is None:
+                raise ValueError("XLSX requires an active worksheet")
+            # Some exporters save stale dimensions; they must not truncate data.
+            sheet.reset_dimensions()
+            iterator = sheet.iter_rows()
+            headers = [cell.value for cell in next(iterator, ())]
             if (
                 not headers
                 or any(not isinstance(c, str) or not c.strip() for c in headers)
                 or len(set(headers)) != len(headers)
             ):
                 raise ValueError("XLSX requires unique, nonempty string column names")
+            text_columns = [i for i, name in enumerate(headers) if name.endswith("_id")]
             rows = []
-            for row in iterator:
+            for cells in iterator:
+                if any(cell.data_type == "f" for cell in cells):
+                    raise ValueError("XLSX formulas are unsupported")
+                row = [cell.value for cell in cells]
+                if len(row) != len(headers):
+                    raise ValueError("XLSX rows must match the header width")
+                if any(not isinstance(row[i], str) for i in text_columns):
+                    raise ValueError("XLSX identifiers must be text cells")
+                if "amount" in headers and isinstance(row[headers.index("amount")], bool):
+                    raise ValueError("amount must be numeric, not boolean")
                 rows.append(row)
                 if len(rows) > max_rows:
                     break

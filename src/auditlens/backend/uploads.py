@@ -4,6 +4,7 @@ import csv
 import io
 import re
 import zipfile
+from datetime import date, time, timedelta
 from pathlib import PurePosixPath
 
 import polars as pl
@@ -16,6 +17,18 @@ from starlette.formparsers import MultiPartException, MultiPartParser
 from auditlens.handbook import RAW_COLUMNS, validate_transactions
 
 from .errors import APIError
+
+
+class CompleteMultiPartParser(MultiPartParser):
+    """Require the closing boundary; incomplete optional history must not disappear."""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.complete = False
+
+    def on_end(self):
+        super().on_end()
+        self.complete = True
 
 
 def headers_valid(headers):
@@ -43,6 +56,7 @@ def preflight_xlsx(data, settings, max_rows):
             raise APIError(413, "unsafe_xlsx", "XLSX expanded size exceeds the configured limit.")
         for entry in entries:
             path = PurePosixPath(entry.filename)
+            normalized_name = entry.filename.lower()
             if (
                 path.is_absolute()
                 or ".." in path.parts
@@ -53,11 +67,11 @@ def preflight_xlsx(data, settings, max_rows):
                 raise APIError(400, "unsafe_xlsx", "Unsupported XLSX archive structure.")
             if entry.file_size > settings.max_zip_ratio * max(1, entry.compress_size):
                 raise APIError(413, "unsafe_xlsx", "XLSX compression ratio exceeds the configured limit.")
-            if entry.filename.lower().endswith(".bin") or any(
+            if normalized_name.endswith(".bin") or any(
                 part.lower() in {"externallinks", "embeddings", "macrosheets"} for part in path.parts
             ):
                 raise APIError(400, "unsafe_xlsx", "XLSX active content and external links are unsupported.")
-            if not entry.filename.endswith((".xml", ".rels")):
+            if not normalized_name.endswith((".xml", ".rels")):
                 continue
             # Reading is bounded by prechecked central-directory sizes; zipfile also checks CRC.
             xml = archive.read(entry)
@@ -66,7 +80,7 @@ def preflight_xlsx(data, settings, max_rows):
                 if local == "f" or element.attrib.get("TargetMode", "").lower() == "external":
                     raise APIError(400, "unsafe_xlsx", "Formulas and external relationships are unsupported.")
                 # Guard worksheet dimensions, including sparse or deliberately misleading sheets.
-                if local in {"c", "dimension"} and entry.filename.startswith("xl/worksheets/"):
+                if local in {"c", "dimension"} and normalized_name.startswith("xl/worksheets/"):
                     reference = element.attrib.get("r" if local == "c" else "ref", "")
                     for column, row in re.findall(r"([A-Z]+)([0-9]+)", reference):
                         if len(column) > 2 or (len(column) == 2 and column > "IV") or int(row) > max_rows + 1:
@@ -122,6 +136,8 @@ def read_upload(data: bytes, filename: str, max_rows: int, settings):
                         raise APIError(422, "invalid_schema", "XLSX identifiers must be text cells.")
                     if isinstance(row[headers.index("amount")], bool):
                         raise APIError(422, "invalid_schema", "amount must be numeric, not boolean.")
+                    if isinstance(row[headers.index("amount")], (date, time, timedelta)):
+                        raise APIError(422, "invalid_schema", "amount must be numeric, not a date or duration.")
                     rows.append(row)
             finally:
                 book.close()
@@ -150,12 +166,16 @@ async def multipart_inputs(request, settings):
         raise APIError(
             400, "invalid_multipart", "Use multipart/form-data with transactions, optional history and top_k."
         )
-    parser = MultiPartParser(request.headers, request.stream(), max_files=2, max_fields=1, max_part_size=128)
+    parser = CompleteMultiPartParser(
+        request.headers, request.stream(), max_files=2, max_fields=1, max_part_size=128
+    )
     # The outer ASGI gate bounds the entire body, so uploads never roll to disk.
     parser.spool_max_size = settings.max_request_bytes + 1
     form = None
     try:
         form = await parser.parse()
+        if not parser.complete:
+            raise APIError(400, "invalid_multipart", "Multipart body is missing its closing boundary.")
         items = form.multi_items()
         names = [name for name, _ in items]
         if len(set(names)) != len(names) or set(names) - {"transactions", "history", "top_k"}:

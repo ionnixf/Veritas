@@ -35,6 +35,8 @@ def validate_transactions(frame):
             raise ValueError(f"{col} must contain nonempty text IDs")
     if frame["amount"].dtype == pl.Boolean:
         raise ValueError("amount must be numeric, not boolean")
+    if frame["amount"].dtype != pl.String and not frame["amount"].dtype.is_numeric():
+        raise ValueError("amount must be numeric")
     try:
         amount = frame["amount"].cast(pl.Float64, strict=True)
     except Exception as error:
@@ -45,6 +47,10 @@ def validate_transactions(frame):
     # Uniform format prevents silently mixing offsets/local times in exported files.
     timestamp = frame["timestamp"]
     if timestamp.dtype == pl.String:
+        if timestamp.null_count() or not timestamp.str.contains(
+            r"^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}$"
+        ).all():
+            raise ValueError("timestamp requires YYYY-MM-DDTHH:MM:SS in UTC (without suffix)")
         try:
             timestamp = timestamp.str.to_datetime(format="%Y-%m-%dT%H:%M:%S", strict=True)
         except Exception as error:
@@ -53,6 +59,10 @@ def validate_transactions(frame):
         raise ValueError("timestamp must be UTC wall-time text or timezone-naive datetime")
     if timestamp.null_count():
         raise ValueError("timestamp must be complete")
+    # Polars supports year zero and wider dates than Python/API serialization.
+    # Native XLSX datetimes must have the same whole-second precision as CSV.
+    if not timestamp.dt.year().is_between(1, 9999).all() or timestamp.dt.nanosecond().ne(0).any():
+        raise ValueError("timestamp must use years 0001..9999 and whole seconds")
     return frame.select(RAW_COLUMNS).with_columns(amount, timestamp.cast(pl.Datetime("us")))
 
 

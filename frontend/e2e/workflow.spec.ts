@@ -379,6 +379,57 @@ test("fault injection: unavailable server, empty result, indeterminate loading a
   await expect(page.getByRole("button", { name: "Reanalyze" })).toBeEnabled();
 });
 
+test("retrying a template download clears the previous error", async ({
+  page,
+}) => {
+  await ready(page);
+  await page
+    .getByRole("link", { name: "Analyze transactions", exact: true })
+    .click();
+  await page.route("**/api/v1/templates/transactions.csv", (route) =>
+    route.abort("failed"),
+  );
+  await page
+    .getByRole("button", { name: "Transactions CSV", exact: true })
+    .click();
+  await expect(page.getByRole("alert")).toContainText("Cannot reach");
+
+  await page.unroute("**/api/v1/templates/transactions.csv");
+  const download = page.waitForEvent("download");
+  await page
+    .getByRole("button", { name: "Transactions CSV", exact: true })
+    .click();
+  expect((await download).suggestedFilename()).toBe("transactions.csv");
+  await expect(page.getByRole("alert")).toHaveCount(0);
+  await expect(page.locator(".notice")).toHaveText(
+    "Transactions template downloaded.",
+  );
+});
+
+test("successful reanalysis clears the connection warning after an interrupted request", async ({
+  page,
+}) => {
+  await ready(page);
+  await demo(page);
+  await page.route("**/api/v1/demo/analyze", (route) => route.abort("failed"));
+  await page.getByRole("button", { name: "Reanalyze" }).click();
+  await expect(page.locator(".connection-banner")).toContainText(
+    "Analysis server unavailable",
+  );
+  await expect(page.locator("tbody tr")).toHaveCount(5);
+
+  await page.unroute("**/api/v1/demo/analyze");
+  const response = page.waitForResponse(
+    (r) => r.url().endsWith("/demo/analyze") && r.status() === 200,
+  );
+  await page.getByRole("button", { name: "Reanalyze" }).click();
+  await response;
+  await expect(page.getByText("Analysis server connected")).toBeVisible();
+  await expect(page.locator(".connection-banner")).toHaveCount(0);
+  await expect(page.getByRole("alert")).toHaveCount(0);
+  await expect(page.locator("tbody tr")).toHaveCount(5);
+});
+
 test("automated accessibility checks on desktop and mobile, including transaction dialog", async ({
   page,
 }) => {

@@ -159,6 +159,21 @@ def test_xlsx_rejects_lossy_ids_and_booleans(client, column, value):
     assert upload(client, stream.getvalue(), filename="bad.xlsx").status_code == 422
 
 
+def test_xlsx_date_amount_is_rejected_instead_of_converted_to_excel_serial(client):
+    from datetime import datetime
+
+    from openpyxl import load_workbook
+
+    book = load_workbook(io.BytesIO(xlsx_data()))
+    book.active["E2"] = datetime(2026, 2, 1, 12)
+    stream = io.BytesIO()
+    book.save(stream)
+    book.close()
+    response = upload(client, stream.getvalue(), filename="date-amount.xlsx")
+    assert response.status_code == 422
+    assert response.json()["error"]["code"] == "invalid_schema"
+
+
 def test_xlsx_ignores_untrusted_dimensions(client):
     stream = io.BytesIO()
     with zipfile.ZipFile(io.BytesIO(xlsx_data())) as source, zipfile.ZipFile(stream, "w") as output:
@@ -189,6 +204,21 @@ def test_xlsx_datetime_cells_without_dimensions(client):
     assert stable(response.json()) == stable(upload(client).json())
 
 
+def test_xlsx_subsecond_timestamp_is_rejected_instead_of_truncated(client):
+    from datetime import datetime
+
+    from openpyxl import load_workbook
+
+    book = load_workbook(io.BytesIO(xlsx_data()))
+    for row in book.active.iter_rows(min_row=2):
+        row[1].value = datetime.fromisoformat(row[1].value)
+    book.active["B2"] = datetime(2026, 2, 1, 12, 0, 0, 123000)
+    stream = io.BytesIO()
+    book.save(stream)
+    book.close()
+    assert upload(client, stream.getvalue(), filename="fractional.xlsx").status_code == 422
+
+
 @pytest.mark.parametrize("value", ["0", "-1", "1.5", "true", "", "NaN", "1000000000000"])
 def test_invalid_top_k(client, value):
     assert upload(client, top_k=value).status_code == 422
@@ -213,6 +243,36 @@ def test_stable_ties_and_leading_zero_ids(client):
     assert [r["record_id"] for r in rows] == ["0002", "0001"]
     assert rows[0]["score"] == rows[1]["score"]
     assert all(r["customer_id"] == "01" and r["terminal_id"] == "02" for r in rows)
+
+
+@pytest.mark.parametrize("timestamp", ["0001-01-01T00:00:00", "0001-02-01T00:00:00", "0999-01-01T00:00:00"])
+def test_early_years_preserve_iso_timestamp_and_do_not_overflow_coverage(client, timestamp):
+    data = (
+        "record_id,timestamp,customer_id,terminal_id,amount\n"
+        f"r,{timestamp},c,t,20\n"
+    ).encode()
+    response = upload(client, data, history=False)
+    assert response.status_code == 200
+    assert response.json()["operations"][0]["timestamp"] == timestamp
+
+
+def test_early_year_history_coverage_is_reported_without_datetime_underflow(client):
+    header = b"record_id,timestamp,customer_id,terminal_id,amount\n"
+    current = header + b"r,0001-01-02T00:00:00,c,t,20\n"
+    history = header + b"h,0001-01-01T00:00:00,c,t,10\n"
+    response = upload(client, current, past=history)
+    assert response.status_code == 200
+    assert response.json()["history_count"] == 1
+    assert any("Insufficient history coverage" in warning for warning in response.json()["warnings"])
+
+
+@pytest.mark.parametrize("timestamp", ["0000-01-01T00:00:00", "2026-2-1T1:2:3"])
+def test_timestamp_outside_public_contract_is_a_validation_error(client, timestamp):
+    data = (
+        "record_id,timestamp,customer_id,terminal_id,amount\n"
+        f"r,{timestamp},c,t,20\n"
+    ).encode()
+    assert upload(client, data, history=False).status_code == 422
 
 
 @pytest.mark.parametrize("field", ["target", "label", "TX_FRAUD", "TX_FRAUD_SCENARIO", "customer_count_30d"])
@@ -390,6 +450,26 @@ def test_xlsx_formula_links_entities_and_bombs(client):
         assert upload(client, stream.getvalue(), filename="unsafe.xlsx").status_code == status
 
 
+def test_xlsx_uppercase_xml_extension_cannot_bypass_formula_checks(client):
+    from openpyxl import load_workbook
+
+    book = load_workbook(io.BytesIO(xlsx_data()))
+    book.active["A2"] = "=1+1"
+    original = io.BytesIO()
+    book.save(original)
+    book.close()
+    renamed = io.BytesIO()
+    with zipfile.ZipFile(original) as source, zipfile.ZipFile(renamed, "w") as output:
+        for entry in source.infolist():
+            contents = source.read(entry)
+            if entry.filename == "xl/_rels/workbook.xml.rels":
+                contents = contents.replace(b"sheet1.xml", b"sheet1.XML")
+            output.writestr(entry.filename.replace("sheet1.xml", "sheet1.XML"), contents)
+    response = upload(client, renamed.getvalue(), filename="formula.xlsx")
+    assert response.status_code == 400
+    assert response.json()["error"]["code"] == "unsafe_xlsx"
+
+
 def test_multipart_handles_closed_on_success_failure_and_truncation(client, monkeypatch):
     import starlette.formparsers as parsers
 
@@ -414,6 +494,38 @@ def test_multipart_handles_closed_on_success_failure_and_truncation(client, monk
     )
     assert response.status_code in {400, 422}
     assert created and all(handle.closed and not handle._rolled for handle in created)
+
+
+def test_incomplete_optional_history_cannot_silently_become_cold_start(client, app, monkeypatch):
+    import starlette.formparsers as parsers
+
+    created = []
+    original = parsers.SpooledTemporaryFile
+
+    def tracked(*args, **kwargs):
+        handle = original(*args, **kwargs)
+        created.append(handle)
+        return handle
+
+    def forbidden(*args, **kwargs):
+        pytest.fail("Incomplete multipart inputs must not reach inference")
+
+    monkeypatch.setattr(parsers, "SpooledTemporaryFile", tracked)
+    monkeypatch.setattr(app.state.service.model, "analyze", forbidden)
+    body = (
+        b'--cut\r\nContent-Disposition: form-data; name="top_k"\r\n\r\n5\r\n'
+        b'--cut\r\nContent-Disposition: form-data; name="transactions"; filename="table.csv"\r\n\r\n'
+        + csv_data()
+        + b'\r\n--cut\r\nContent-Disposition: form-data; name="history"; filename="history.csv"\r\n\r\n'
+        + csv_data("history")
+    )
+    response = client.post(
+        "/api/v1/analyze", content=body, headers={"Content-Type": "multipart/form-data; boundary=cut"}
+    )
+    assert response.status_code == 400
+    assert response.json()["error"]["code"] == "invalid_multipart"
+    assert len(created) == 2
+    assert all(handle.closed and not handle._rolled for handle in created)
 
 
 def test_cors_is_explicit_and_covers_errors():

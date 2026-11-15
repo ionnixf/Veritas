@@ -251,7 +251,7 @@ def create_app(settings=None):
             "Actual ranking is model-dependent; this example is not an accuracy benchmark.",
             provenance="Deterministic self-authored fictional records; no publisher dataset rows or labels.",
             transactions=[
-                {**r, "timestamp": r["timestamp"].strftime("%Y-%m-%dT%H:%M:%S")} for r in current.to_dicts()
+                {**r, "timestamp": r["timestamp"].isoformat(timespec="seconds")} for r in current.to_dicts()
             ],
             history_count=93,
             downloads={name: f"/api/v1/templates/{name}.csv" for name in files},
