@@ -1,0 +1,6 @@
+record_id,timestamp,customer_id,terminal_id,amount
+own-purchase-001,2026-02-01T10:00:00,shop-alex,checkout-01,34
+own-purchase-002,2026-02-01T11:00:00,shop-bea,checkout-02,67
+own-change-003,2026-02-01T12:00:00,shop-alex,checkout-01,195
+own-terminal-004,2026-02-01T13:00:00,shop-chen,checkout-new,94
+own-cold-005,2026-02-01T14:00:00,shop-new,checkout-new,45
