@@ -1,0 +1,6 @@
+services:
+  auditlens:
+    build: .
+    ports:
+      - "127.0.0.1:${AUDITLENS_PORT:-8088}:8088"
+    init: true

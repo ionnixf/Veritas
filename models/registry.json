@@ -1,0 +1,79 @@
+{
+  "registry_version": 4,
+  "recommended_models": [],
+  "research_demo_models": [
+    "handbook"
+  ],
+  "models": {
+    "handbook": {
+      "dataset": "handbook",
+      "model_version": "handbook-xgboost-v1",
+      "status": "RESEARCH DEMO",
+      "servable": true,
+      "recommended_for_live_detection": false,
+      "artifact_directory": "models/handbook-xgboost-v1",
+      "artifact_path": "models/handbook-xgboost-v1/pipeline.joblib",
+      "artifact_sha256": "c775eef5b098656bfc05ce867bd8983403221bbb9ba7c5ba38c0981bb1b5d2cd",
+      "input_schema_path": "models/handbook-xgboost-v1/input-schema.json",
+      "input_schema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "title": "Handbook transaction v1",
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "record_id",
+          "timestamp",
+          "customer_id",
+          "terminal_id",
+          "amount"
+        ],
+        "properties": {
+          "record_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "timestamp": {
+            "type": "string",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}$",
+            "description": "UTC wall time, no offset suffix; same timezone for every row"
+          },
+          "customer_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "terminal_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "amount": {
+            "type": "number",
+            "minimum": 0
+          }
+        },
+        "x-table-constraints": [
+          "record_id unique text; all amounts finite; one currency/unit",
+          "History IDs disjoint; history strictly earlier than batch",
+          "No label, scenario, engineered features or extra columns"
+        ]
+      },
+      "threshold": 0.37946856021881104,
+      "score_kind": "uncalibrated_classifier_score",
+      "supported_domain": "Handbook synthetic transactions; exact raw transaction schema and 30-day history",
+      "limitations": [
+        "Synthetic labels; no independent real-bank validation",
+        "No label-history features",
+        "Dataset redistribution license not explicitly found",
+        "Corrected benchmark after alignment bug; test previously opened in invalid run"
+      ],
+      "validation_report": "models/handbook-xgboost-v1/benchmark.json",
+      "runtime": {
+        "device": "cpu",
+        "threads": [
+          1,
+          2
+        ],
+        "trusted_artifacts_only": true
+      }
+    }
+  }
+}

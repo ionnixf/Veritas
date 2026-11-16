@@ -1,5 +1,22 @@
-__pycache__/
 .venv*/
-data/raw/
-.playwright-mcp/
-docs/pdf/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+*.egg-info/
+build/
+dist/
+frontend/node_modules/
+frontend/dist/
+frontend/test-results/
+frontend/playwright-report/
+.env
+.env.*
+!.env.example
+!frontend/.env.example
+*.pem
+*.key
+
+# Locally retained research data and derived examples
+/data/**
+!/data/README.md
