@@ -10,8 +10,6 @@ model on CPU, inspect spending history and export a review queue.
 files into a prioritized review queue with customer spending context.
 
 - [One-page project write-up](submission/WRITEUP.md)
-- [Submission form answers](submission/FORM_ANSWERS.md)
-- [Two-minute demo script](submission/DEMO_SCRIPT.md)
 - [Verification record](submission/VERIFICATION.md)
 
 ## Run
